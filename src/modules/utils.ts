@@ -45,9 +45,13 @@ const DISCORD_PHRASES: string[] = [
   'Exploring The Abyss.',
   'Training with Saitama.',
   'Rebuilding civilization.',
-  'Playing poker with in Egypt.',
+  'Playing poker in Egypt.',
   'Watching a movie with Makima.',
   'Attempting to summon Mahoraga.',
+  'Fighting aliens with turbo-granny.',
+  'Entering the flow state with Rin.',
+  'Planning the perfect move with L.',
+  'Collecting cards in Greed Island.',
 ];
 
 export const getRandomDiscordPhrase = (): string =>
@@ -203,7 +207,9 @@ export const getAvailableEpisodes = (animeEntry: Media) =>
   animeEntry.nextAiringEpisode == null
     ? animeEntry.episodes == null
       ? animeEntry.airingSchedule?.edges &&
-        animeEntry.airingSchedule?.edges[0].node?.episode
+        animeEntry.airingSchedule?.edges[
+          animeEntry.airingSchedule.edges.length - 1
+        ]?.node?.episode
       : animeEntry.episodes
     : animeEntry.nextAiringEpisode.episode - 1;
 

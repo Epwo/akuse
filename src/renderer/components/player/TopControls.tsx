@@ -1,5 +1,6 @@
 import 'react-activity/dist/Dots.css';
 
+import { ISubtitle } from '@consumet/extensions';
 import {
   faAngleLeft,
   faCompress,
@@ -14,7 +15,6 @@ import { ListAnimeData } from '../../../types/anilistAPITypes';
 import { EpisodeInfo } from '../../../types/types';
 import VideoEpisodesChange from './VideoEpisodesChange';
 import VideoSettings from './VideoSettings';
-import { ISubtitle } from '@consumet/extensions';
 
 interface TopControlsProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -27,9 +27,7 @@ interface TopControlsProps {
   showNextEpisodeButton: boolean;
   fullscreen: boolean;
   subtitleTracks?: ISubtitle[];
-  onSubtitleTrack: (
-    track: ISubtitle
-  ) => void;
+  onSubtitleTrack: (track: ISubtitle) => void;
   onFullScreentoggle: () => void;
   onPiPToggle: () => void;
   onChangeEpisode: (
@@ -60,7 +58,7 @@ const TopControls: React.FC<TopControlsProps> = ({
   onDblClick,
   onDropdownToggle,
   subtitleTracks,
-  onSubtitleTrack
+  onSubtitleTrack,
 }) => {
   const settingsRef = useRef<HTMLDivElement>(null);
 
@@ -90,19 +88,24 @@ const TopControls: React.FC<TopControlsProps> = ({
           </span>
         </div>
       </div>
-      <div className="center"></div>
+      <div className="center" />
       <div className="right">
         <VideoSettings
           show={showSettings}
-          subtitleTracks={subtitleTracks}
+          subtitleTracks={subtitleTracks?.filter(
+            (value) =>
+              value.lang &&
+              value.lang !== 'Thumbnails' &&
+              value.lang !== 'thumbnails',
+          )}
+          videoRef={videoRef}
+          ref={settingsRef}
+          hls={hls}
           onSubtitleTrack={onSubtitleTrack}
           onShow={(show) => {
             closeOthers();
             setShowSettings(show);
           }}
-          videoRef={videoRef}
-          ref={settingsRef}
-          hls={hls}
           onChangeEpisode={onChangeEpisode}
         />
         <VideoEpisodesChange

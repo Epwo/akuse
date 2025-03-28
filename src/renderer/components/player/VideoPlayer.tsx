@@ -1,7 +1,7 @@
 import './styles/VideoPlayer.css';
 import 'react-activity/dist/Dots.css';
 
-import { ISubtitle, IVideo } from '@consumet/extensions';
+import { ISource, ISubtitle, IVideo } from '@consumet/extensions';
 import { faFastForward } from '@fortawesome/free-solid-svg-icons';
 import axios from 'axios';
 import { ipcRenderer } from 'electron';
@@ -19,7 +19,7 @@ import {
 } from '../../../modules/anilist/anilistApi';
 import AniSkip from '../../../modules/aniskip';
 import { getAnimeHistory, setAnimeHistory } from '../../../modules/history';
-import { getUniversalEpisodeUrl } from '../../../modules/providers/api';
+import { getSourceFromProvider } from '../../../modules/providers/api';
 import {
   getAvailableEpisodes,
   getRandomDiscordPhrase,
@@ -48,8 +48,9 @@ const debounce = (id: string, func: () => void, delay: number) => {
 };
 
 const VideoPlayer: React.FC<{
-  video: IVideo | null;
+  source: ISource | null;
   listAnimeData: ListAnimeData;
+  providerAnimeId?: string;
   episodesInfo?: EpisodeInfo[];
   animeEpisodeNumber: number;
   show: boolean;
@@ -61,8 +62,9 @@ const VideoPlayer: React.FC<{
   onChangeLoading: (value: boolean) => void;
   onClose: () => void;
 }> = ({
-  video,
+  source,
   listAnimeData,
+  providerAnimeId,
   episodesInfo,
   animeEpisodeNumber,
   show,
@@ -309,8 +311,9 @@ const VideoPlayer: React.FC<{
   };
 
   useEffect(() => {
-    if (video !== null) {
-      playSource(video);
+    if (source !== null) {
+      const bestVideo = getBestQualityVideo(source.sources);
+      playSource(bestVideo, source.headers, source.subtitles);
 
       // resume from tracked progress
       const animeId = (listAnime.media.id ||
@@ -337,9 +340,9 @@ const VideoPlayer: React.FC<{
 
       setShowNextEpisodeButton(canNextEpisode(animeEpisodeNumber));
       setShowPreviousEpisodeButton(canPreviousEpisode(animeEpisodeNumber));
-      getSkipEvents(animeEpisodeNumber, video);
+      getSkipEvents(animeEpisodeNumber, bestVideo);
     }
-  }, [video, listAnime]);
+  }, [source, listAnime]);
 
   const setSubtitleTrack = (subtitleTrack: ISubtitle) => {
     if (!videoRef.current) return;
@@ -358,9 +361,28 @@ const VideoPlayer: React.FC<{
     track.track.mode = 'showing';
   };
 
-  const playSource = (video: IVideo) => {
-    if (video.isM3U8) {
-      playHlsVideo(video);
+  const getBestQualityVideo = (videos: IVideo[]): IVideo => {
+    const qualityOrder = ['1080p', '720p', '480p', '360p', 'default', 'backup'];
+
+    videos.sort((a, b) => {
+      const indexA = qualityOrder.indexOf(a.quality || 'default');
+      const indexB = qualityOrder.indexOf(b.quality || 'default');
+
+      if (indexA < indexB) return -1;
+      if (indexA > indexB) return 1;
+      return 0;
+    });
+
+    return videos[0];
+  };
+
+  const playSource = (
+    video: IVideo,
+    headers?: any,
+    subtitles?: ISubtitle[],
+  ) => {
+    if (video?.isM3U8) {
+      playHlsVideo(video, headers, subtitles);
     } else {
       if (videoRef.current) {
         videoRef.current.src = video.url;
@@ -368,14 +390,25 @@ const VideoPlayer: React.FC<{
     }
   };
 
-  const playHlsVideo = (video: IVideo) => {
+  const playHlsVideo = (
+    video: IVideo,
+    headers?: any,
+    subtitles?: ISubtitle[],
+  ) => {
     const url = video.url;
     try {
       if (Hls.isSupported() && videoRef.current) {
         var hls = new Hls();
         hls.loadSource(url);
-        if (video.tracks) {
-          const tracks = video.tracks as ISubtitle[];
+        if (
+          subtitles?.some(
+            (value) =>
+              value.lang &&
+              value.lang !== 'Thumbnails' &&
+              value.lang !== 'thumbnails',
+          )
+        ) {
+          const tracks = subtitles;
           setSubtitleTracks(tracks);
 
           videoRef.current.addEventListener('loadeddata', () => {
@@ -708,7 +741,7 @@ const VideoPlayer: React.FC<{
   };
 
   const handleDropdownToggle = (isDropdownOpen: boolean) => {
-    console.log(isDropdownOpen);
+    // console.log(isDropdownOpen);
     setIsDropdownOpen(isDropdownOpen);
   };
 
@@ -796,8 +829,8 @@ const VideoPlayer: React.FC<{
     if (reloadAtPreviousTime && videoRef.current)
       previousTime = videoRef.current?.currentTime;
 
-    const setData = (video: IVideo) => {
-      playSource(video);
+    const setData = (video: IVideo, headers?: any, subtitles?: ISubtitle[]) => {
+      playSource(video, headers, subtitles);
 
       setEpisodeNumber(episodeToPlay);
       getSkipEvents(episodeToPlay, video);
@@ -824,10 +857,8 @@ const VideoPlayer: React.FC<{
       onChangeLoading(false);
     };
 
-    console.log({ anime, episodeToPlay });
-
-    const data = await getUniversalEpisodeUrl(anime, episodeToPlay);
-    if (!data) {
+    const source = await getSourceFromProvider(providerAnimeId!, episodeToPlay);
+    if (!source) {
       toast(`Source not found.`, {
         style: {
           color: style.getPropertyValue('--font-2'),
@@ -840,7 +871,9 @@ const VideoPlayer: React.FC<{
       return false;
     }
 
-    setData(data);
+    const bestVideo = getBestQualityVideo(source.sources);
+
+    setData(bestVideo, source.headers);
     return true;
   };
 

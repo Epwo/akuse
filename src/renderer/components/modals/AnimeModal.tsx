@@ -1,6 +1,6 @@
 import './styles/AnimeModal.css';
 
-import { IVideo } from '@consumet/extensions';
+import { ISource } from '@consumet/extensions';
 import { faCircleExclamation, faStar, faTv, faVolumeHigh, faVolumeXmark, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import axios from 'axios';
@@ -12,7 +12,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { EPISODES_INFO_URL } from '../../../constants/utils';
 import { getAnimeInfo } from '../../../modules/anilist/anilistApi';
 import { getAnimeHistory, setAnimeHistory } from '../../../modules/history';
-import { getUniversalEpisodeUrl } from '../../../modules/providers/api';
+import { getSourceFromProvider } from '../../../modules/providers/api';
 import {
   capitalizeFirstLetter,
   getParsedFormat,
@@ -37,6 +37,7 @@ import {
   AnimeModalStatus,
   AnimeModalWatchButtons,
 } from './AnimeModalElements';
+import AutomaticProviderSearchModal from './AutomaticProviderSearchModal';
 import EpisodesSection from './EpisodesSection';
 import { ModalPage, ModalPageShadow } from './Modal';
 
@@ -70,12 +71,17 @@ const AnimeModal: React.FC<AnimeModalProps> = ({
     useState<boolean>(false);
   const [episodesInfo, setEpisodesInfo] = useState<EpisodeInfo[]>();
 
+  // before player: search provider matching
+  const [showAutomaticProviderSerchModal, setShowAutomaticProviderSerchModal] =
+    useState<boolean>(false);
+
   // player
   const [showPlayer, setShowPlayer] = useState<boolean>(false);
   const [animeEpisodeNumber, setAnimeEpisodeNumber] = useState<number>(0);
-  const [playerIVideo, setPlayerIVideo] = useState<IVideo | null>(null);
+  const [playerISource, setPlayerISource] = useState<ISource | null>(null);
 
   // other
+  const [providerAnimeId, setProviderAnimeId] = useState<string>()
   const [localProgress, setLocalProgress] = useState<number>();
   const [alternativeBanner, setAlternativeBanner] = useState<string>();
   const [loading, setLoading] = useState<boolean>(false);
@@ -160,7 +166,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({
 
   useEffect(() => {
     if (!showPlayer) {
-      setPlayerIVideo(null);
+      setPlayerISource(null);
     }
   }, [showPlayer]);
 
@@ -275,27 +281,26 @@ const AnimeModal: React.FC<AnimeModalProps> = ({
     }
   };
 
-  const playEpisode = async (episode: number) => {
+  // automatic anilist-provider matching search
+  const searchMatch = async (episode: number) => {
+    setAnimeEpisodeNumber(episode);
+    setShowAutomaticProviderSerchModal(true);
+  };
+
+  const playEpisode = async (provAnimeId: string) => {
     if (trailerRef.current) trailerRef.current.pause();
+    
     setShowPlayer(true);
     setLoading(true);
-    setAnimeEpisodeNumber(episode);
 
-    getUniversalEpisodeUrl(listAnimeData, episode).then((data) => {
-      if (!data) {
-        toast(`Source not found.`, {
-          style: {
-            color: style.getPropertyValue('--font-2'),
-            backgroundColor: style.getPropertyValue('--color-3'),
-          },
-          icon: '❌',
-        });
+    await getSourceFromProvider(provAnimeId, animeEpisodeNumber).then((video) => {
+      if (!video) {
         setLoading(false);
-
         return;
       }
-      setPlayerIVideo(data);
-    });
+      setPlayerISource(video);
+      setProviderAnimeId(provAnimeId)
+    })
   };
 
   const handleLocalProgressChange = (localProgress: number) => {
@@ -317,10 +322,21 @@ const AnimeModal: React.FC<AnimeModalProps> = ({
 
   return ReactDOM.createPortal(
     <>
+      <AutomaticProviderSearchModal
+        show={showAutomaticProviderSerchModal}
+        onClose={() => {
+          setShowAutomaticProviderSerchModal(false);
+        }}
+        listAnimeData={listAnimeData}
+        episode={animeEpisodeNumber}
+        onPlay={playEpisode}
+      />
+
       {showPlayer && (
         <VideoPlayer
-          video={playerIVideo}
+          source={playerISource}
           listAnimeData={listAnimeData}
+          providerAnimeId={providerAnimeId}
           episodesInfo={episodesInfo}
           animeEpisodeNumber={animeEpisodeNumber}
           show={showPlayer}
@@ -330,6 +346,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({
           onClose={handlePlayerClose}
         />
       )}
+
       <ModalPageShadow show={show} />
       <ModalPage modalRef={ref} show={show} closeModal={closeModal}>
         <div className="anime-page" onClick={handleClickOutside}>
@@ -342,7 +359,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({
               <AnimeModalWatchButtons
                 listAnimeData={listAnimeData}
                 localProgress={localProgress}
-                onPlay={playEpisode}
+                onPlay={searchMatch}
                 loading={false} // loading disabled
               />
 
@@ -445,7 +462,7 @@ const AnimeModal: React.FC<AnimeModalProps> = ({
               episodesInfoHasFetched={episodesInfoHasFetched}
               listAnimeData={listAnimeData}
               loading={loading}
-              onPlay={playEpisode}
+              onPlay={searchMatch}
             />
             {((relatedAnime && relatedAnime.length > 0) ||
               (recommendedAnime && recommendedAnime.length > 0)) && (

@@ -11,17 +11,30 @@ import Select from '../components/Select';
 
 const STORE = new Store();
 
+export type Provider =
+  | 'HIANIME'
+  | 'GOGOANIME'
+  | 'YUKI'
+  | 'MAZE'
+  | 'PAHE'
+  | 'ANIMEPARADISE'
+  | 'ANIMEHEAVEN'
+  | 'ANIMEUNITY';
+
 interface Option {
   value: any;
   label: string;
 }
 
 export const LANGUAGE_OPTIONS: Option[] = [
-  { value: 'INT', label: '🌍 Universal ' },
-  { value: 'US', label: '🇺🇸 English' },
-  { value: 'IT', label: '🇮🇹 Italian' },
-  // { value: 'ES', label: '🇪🇸 Spanish' },
-  // { value: 'HU', label: '🇭🇺 Hungarian' },
+  { value: 'YUKI', label: '🇺🇸 Yuki' },
+  { value: 'ANIMEUNITY', label: '🇮🇹 AnimeUnity' },
+  { value: 'MAZE', label: '🇺🇸 Maze' },
+  { value: 'PAHE', label: '🇺🇸 Pahe' },
+  { value: 'ANIMEPARADISE', label: '🇺🇸 AnimeParadise' },
+  { value: 'ANIMEHEAVEN', label: '🇺🇸 AnimeHeaven' },
+  { value: 'HIANIME', label: '🌍 HiAnime' },
+  { value: 'GOGOANIME', label: '🇺🇸 Gogoanime' },
 ];
 
 const Element: React.FC<{
@@ -78,7 +91,7 @@ const TextInputElement: React.FC<{
   );
 };
 
-const SelectElement: React.FC<{
+export const SelectElement: React.FC<{
   label: string;
   value: number | string;
   options: Option[];
@@ -268,7 +281,7 @@ const Tab4: React.FC<{ viewerId: number | null }> = ({ viewerId }) => {
               options={LANGUAGE_OPTIONS}
               zIndex={5}
               onChange={handleLanguageChange}
-              width={145}
+              width={180}
             />
 
             <CheckboxElement
