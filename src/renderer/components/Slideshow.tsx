@@ -25,6 +25,7 @@ import { EpisodeInfo } from '../../types/types';
 import { ButtonMain } from './Buttons';
 import AnimeModal from './modals/AnimeModal';
 import VideoPlayer from './player/VideoPlayer';
+import CastProvider from 'react-chromecast';
 
 interface SlideProps {
   listAnimeData: ListAnimeData;
@@ -114,6 +115,7 @@ const Slide: React.FC<SlideProps> = ({ listAnimeData, index, isVisible }) => {
   };
 
   return (
+
     <>
       {showPlayer && (
         <VideoPlayer

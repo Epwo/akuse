@@ -4,6 +4,7 @@ import {
   faAngleLeft,
   faCompress,
   faExpand,
+  faCartArrowDown,
   faUpRightFromSquare,
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -14,7 +15,13 @@ import { ListAnimeData } from '../../../types/anilistAPITypes';
 import { EpisodeInfo } from '../../../types/types';
 import VideoEpisodesChange from './VideoEpisodesChange';
 import VideoSettings from './VideoSettings';
+import React, { useCallback } from 'react';
+import { useMedia } from 'react-chromecast';
+import { getUniversalEpisodeUrl } from '../../../modules/providers/api';
 import { ISubtitle } from '@consumet/extensions';
+
+
+const mediaSrc = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
 
 interface TopControlsProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -118,6 +125,24 @@ const TopControls: React.FC<TopControlsProps> = ({
           showNextEpisodeButton={showNextEpisodeButton}
           onChangeEpisode={onChangeEpisode}
         />
+        <button className="b-player" onClick={() => {
+          const media = useMedia();
+          const playVideo = useCallback(async () => {
+            if (media) {
+              await media.playMedia(mediaSrc);
+            }
+          }, [media]);
+          return (
+            <>
+                <button onClick={playVideo}>Play</button>
+            </>
+          )
+        }}>
+          <div className="tooltip">
+            <FontAwesomeIcon className="i" icon={faCartArrowDown} />
+            <span className="tooltip-text">Cast to Device</span>
+          </div>
+        </button>
         <button className="b-player" onClick={onPiPToggle}>
           <div className="tooltip">
             <FontAwesomeIcon className="i" icon={faUpRightFromSquare} />
